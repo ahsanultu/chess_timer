@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,13 +21,24 @@ class ChessClockApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Advanced Chess Clock',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      debugShowCheckedModeBanner: false,
-      home: const HomeScreen(),
-    );
+    if (Platform.isIOS) {
+      return const CupertinoApp(
+        title: 'Advanced Chess Clock',
+        theme: CupertinoThemeData(
+          brightness: Brightness.light,
+        ),
+        debugShowCheckedModeBanner: false,
+        home: HomeScreen(),
+      );
+    } else {
+      return MaterialApp(
+        title: 'Advanced Chess Clock',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        debugShowCheckedModeBanner: false,
+        home: const HomeScreen(),
+      );
+    }
   }
 }
