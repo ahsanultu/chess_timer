@@ -188,7 +188,7 @@ class _HomeScreenIosState extends State<HomeScreenIos> {
               onStart: _startGame,
               onPause: _pauseGame,
               onReset: _resetGame,
-              onSettings: () {},
+              onSettings: _showSettings,
             ),
             Expanded(
               child: PlayerTimerIos(

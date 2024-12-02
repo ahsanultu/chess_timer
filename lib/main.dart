@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:chess_timer/screens/home_screen_ios.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +29,7 @@ class ChessClockApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         debugShowCheckedModeBanner: false,
-        home: HomeScreen(),
+        home: HomeScreenIos(),
       );
     } else {
       return MaterialApp(
