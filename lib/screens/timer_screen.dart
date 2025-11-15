@@ -1,184 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:vibration/vibration.dart';
-import '../models/timer_state.dart';
+import 'package:get/get.dart';
+import '../controllers/timer_controller.dart';
+import '../models/time_control.dart';
+import '../widgets/settings_bottom_sheet.dart';
 
-class TimerScreen extends StatefulWidget {
+class TimerScreen extends StatelessWidget {
   const TimerScreen({super.key});
 
   @override
-  State<TimerScreen> createState() => _TimerScreenState();
-}
-
-class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin {
-  late ChessTimerState _timerState;
-  TimeControl _selectedControl = TimeControl.presets[4]; // Default: Blitz 3+2
-  late AnimationController _pulseController;
-  late AnimationController _switchController;
-
-  @override
-  void initState() {
-    super.initState();
-    _timerState = ChessTimerState.fromTimeControl(_selectedControl);
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _switchController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    _timerState.dispose();
-    _pulseController.dispose();
-    _switchController.dispose();
-    super.dispose();
-  }
-
-  void _vibrate({int duration = 30}) async {
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: duration);
-    }
-  }
-
-  void _handlePlayerTap(PlayerTurn player) {
-    if (_timerState.status == TimerStatus.finished) return;
-
-    // Only allow tap if it's the current player's turn or game hasn't started
-    if (_timerState.currentTurn == player || _timerState.currentTurn == PlayerTurn.none) {
-      _vibrate();
-      _switchController.forward(from: 0);
-
-      setState(() {
-        _timerState.switchPlayer();
-
-        if (_timerState.status == TimerStatus.idle) {
-          _timerState.startTimer(_onTick, _onGameOver);
-        }
-      });
-    }
-  }
-
-  void _onTick() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void _onGameOver(PlayerTurn winner) {
-    _vibrate(duration: 500);
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Game Over!'),
-          content: Text(
-            winner == PlayerTurn.player1
-                ? 'Player 1 (Top) Wins!'
-                : 'Player 2 (Bottom) Wins!',
-            style: const TextStyle(fontSize: 18),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _resetTimer();
-              },
-              child: const Text('New Game'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  void _pauseResumeTimer() {
-    _vibrate();
-
-    setState(() {
-      if (_timerState.status == TimerStatus.running) {
-        _timerState.stopTimer();
-      } else if (_timerState.status == TimerStatus.paused) {
-        _timerState.startTimer(_onTick, _onGameOver);
-      }
-    });
-  }
-
-  void _resetTimer() {
-    _vibrate();
-
-    setState(() {
-      _timerState.reset(_selectedControl);
-    });
-  }
-
-  void _showSettings() {
-    _vibrate();
-
-    if (_timerState.status == TimerStatus.running) {
-      _timerState.stopTimer();
-    }
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Select Time Control',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: TimeControl.presets.length,
-                itemBuilder: (context, index) {
-                  final control = TimeControl.presets[index];
-                  final isSelected = control == _selectedControl;
-
-                  return Card(
-                    elevation: isSelected ? 4 : 1,
-                    color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-                    child: ListTile(
-                      title: Text(
-                        control.name,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      trailing: isSelected ? const Icon(Icons.check_circle) : null,
-                      onTap: () {
-                        _vibrate();
-                        setState(() {
-                          _selectedControl = control;
-                          _timerState.reset(control);
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(TimerController());
+
     final screenHeight = MediaQuery.of(context).size.height;
     final controlBarHeight = 80.0;
     final playerAreaHeight = (screenHeight - controlBarHeight) / 2;
@@ -188,12 +20,14 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
         child: Column(
           children: [
             // Player 2 Area (Top - rotated 180°)
-            _buildPlayerArea(
-              player: PlayerTurn.player2,
-              height: playerAreaHeight,
-              isRotated: true,
-              timeMs: _timerState.player2TimeMs,
-            ),
+            Obx(() => _buildPlayerArea(
+                  context: context,
+                  controller: controller,
+                  player: PlayerTurn.player2,
+                  height: playerAreaHeight,
+                  isRotated: true,
+                  timeMs: controller.player2TimeMs.value,
+                )),
 
             // Control Bar
             Container(
@@ -212,35 +46,52 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildControlButton(
+                    context: context,
                     icon: Icons.settings,
-                    onPressed: _showSettings,
+                    onPressed: () {
+                      controller.onSettingsOpen();
+                      if (controller.status.value == TimerStatus.running) {
+                        controller.stopTimer();
+                      }
+                      Get.bottomSheet(
+                        const SettingsBottomSheet(),
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                      );
+                    },
                     tooltip: 'Settings',
                   ),
-                  _buildControlButton(
-                    icon: _timerState.status == TimerStatus.running
-                        ? Icons.pause
-                        : Icons.play_arrow,
-                    onPressed: _timerState.status != TimerStatus.idle
-                        ? _pauseResumeTimer
-                        : null,
-                    tooltip: _timerState.status == TimerStatus.running ? 'Pause' : 'Resume',
-                  ),
-                  _buildControlButton(
-                    icon: Icons.refresh,
-                    onPressed: _resetTimer,
-                    tooltip: 'Reset',
-                  ),
+                  Obx(() => _buildControlButton(
+                        context: context,
+                        icon: controller.status.value == TimerStatus.running
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                        onPressed: controller.status.value != TimerStatus.idle
+                            ? () => controller.togglePauseResume()
+                            : null,
+                        tooltip: controller.status.value == TimerStatus.running
+                            ? 'Pause'
+                            : 'Resume',
+                      )),
+                  Obx(() => _buildControlButton(
+                        context: context,
+                        icon: Icons.refresh,
+                        onPressed: () => controller.resetTimer(controller.selectedControl.value),
+                        tooltip: 'Reset',
+                      )),
                 ],
               ),
             ),
 
             // Player 1 Area (Bottom)
-            _buildPlayerArea(
-              player: PlayerTurn.player1,
-              height: playerAreaHeight,
-              isRotated: false,
-              timeMs: _timerState.player1TimeMs,
-            ),
+            Obx(() => _buildPlayerArea(
+                  context: context,
+                  controller: controller,
+                  player: PlayerTurn.player1,
+                  height: playerAreaHeight,
+                  isRotated: false,
+                  timeMs: controller.player1TimeMs.value,
+                )),
           ],
         ),
       ),
@@ -248,13 +99,16 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   }
 
   Widget _buildPlayerArea({
+    required BuildContext context,
+    required TimerController controller,
     required PlayerTurn player,
     required double height,
     required bool isRotated,
     required int timeMs,
   }) {
-    final isActive = _timerState.currentTurn == player && _timerState.status == TimerStatus.running;
-    final isFinished = _timerState.status == TimerStatus.finished;
+    final isActive = controller.currentTurn.value == player &&
+        controller.status.value == TimerStatus.running;
+    final isFinished = controller.status.value == TimerStatus.finished;
     final isWinner = isFinished && timeMs > 0;
     final isLoser = isFinished && timeMs <= 0;
 
@@ -270,7 +124,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
     }
 
     return GestureDetector(
-      onTap: () => _handlePlayerTap(player),
+      onTap: () => controller.switchPlayer(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: height,
@@ -298,13 +152,25 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
             children: [
               // Active indicator pulse
               if (isActive)
-                FadeTransition(
-                  opacity: _pulseController,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    ),
-                  ),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 1000),
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: 0.3 + (0.2 * (1 - value)),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                        ),
+                      ),
+                    );
+                  },
+                  onEnd: () {
+                    // Restart animation
+                    if (isActive) {
+                      (context as Element).markNeedsBuild();
+                    }
+                  },
                 ),
 
               // Time display
@@ -313,7 +179,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _timerState.formatTime(timeMs),
+                      controller.formatTime(timeMs),
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                             color: isActive
                                 ? Theme.of(context).colorScheme.onPrimaryContainer
@@ -329,7 +195,10 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: isActive
                                 ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withOpacity(0.6),
                             letterSpacing: 2,
                           ),
                     ),
@@ -342,18 +211,25 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                 Positioned(
                   left: 20,
                   top: 20,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 1.0, end: 1.2).animate(
-                      CurvedAnimation(
-                        parent: _pulseController,
-                        curve: Curves.easeInOut,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.play_circle_filled,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 32,
-                    ),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 1.0, end: 1.2),
+                    duration: const Duration(milliseconds: 500),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Icon(
+                          Icons.play_circle_filled,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 32,
+                        ),
+                      );
+                    },
+                    onEnd: () {
+                      // Restart animation
+                      if (isActive) {
+                        (context as Element).markNeedsBuild();
+                      }
+                    },
                   ),
                 ),
             ],
@@ -364,6 +240,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
   }
 
   Widget _buildControlButton({
+    required BuildContext context,
     required IconData icon,
     required VoidCallback? onPressed,
     required String tooltip,

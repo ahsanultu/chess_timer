@@ -16,6 +16,12 @@ Advanced Chess Timer built with Flutter - designed for an effortless, player-foc
   - Blitz: 3+0, 3+2, 5+0, 5+3
   - Rapid: 10+0, 15+10
   - Classical: 30+0
+- **Custom Time Controls**: Create unlimited custom time settings
+  - Set any duration from 1 to 180 minutes
+  - Choose increment from 0 to 60 seconds
+  - Name your custom presets
+  - Automatically saved for future use
+  - Delete custom presets anytime
 - **Increment Support**: Automatically adds time after each move
 - **Precision Display**: Shows tenths of a second when under 1 minute
 - **Pause/Resume**: Pause the game anytime and resume when ready
@@ -32,7 +38,8 @@ Advanced Chess Timer built with Flutter - designed for an effortless, player-foc
 
 1. **Select Time Control**:
    - Tap the ⚙️ Settings button
-   - Choose your preferred time control from the list
+   - Choose from 10 preset time controls or your custom ones
+   - Tap "Create Custom Time" to make your own
    - Default is Blitz 3+2
 
 2. **Start the Game**:
@@ -49,6 +56,14 @@ Advanced Chess Timer built with Flutter - designed for an effortless, player-foc
    - When a player runs out of time, the game ends automatically
    - Winner is shown in a dialog
    - Tap "New Game" to start fresh
+
+## Technical Stack
+
+- **Framework**: Flutter 3.0+
+- **State Management**: GetX (reactive, efficient, minimal boilerplate)
+- **Persistence**: SharedPreferences (for custom time controls)
+- **Haptics**: Vibration package
+- **UI**: Material Design 3
 
 ## Installation
 

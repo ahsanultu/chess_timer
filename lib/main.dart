@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'screens/timer_screen.dart';
 
 void main() {
@@ -20,7 +21,7 @@ class ChessTimerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Chess Timer',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
