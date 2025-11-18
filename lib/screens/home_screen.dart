@@ -37,21 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
       delay: Duration(seconds: 2),
     );
 
-    player1 = Player(
-      name: 'Player 1',
-      timeLeft: timeControl.initialTime,
-      movesPlayed: 0,
-    );
+    player1 = Player(name: 'Player 1', timeLeft: timeControl.initialTime, movesPlayed: 0);
 
-    player2 = Player(
-      name: 'Player 2',
-      timeLeft: timeControl.initialTime,
-      movesPlayed: 0,
-    );
+    player2 = Player(name: 'Player 2', timeLeft: timeControl.initialTime, movesPlayed: 0);
   }
 
-  void _togglePlayer() {
+  void _togglePlayer(int tappedPlayer) {
     if (!isGameActive || isPaused) return;
+    if (tappedPlayer != activePlayer) return;
 
     setState(() {
       if (activePlayer == 1) {
@@ -106,11 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => SettingsDialog(
-        currentTimeControl: timeControl,
-        player1Name: player1.name,
-        player2Name: player2.name,
-      ),
+      builder: (context) =>
+          SettingsDialog(currentTimeControl: timeControl, player1Name: player1.name, player2Name: player2.name),
     );
 
     if (result != null) {
@@ -168,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: PlayerTimer(
                   player: player2,
                   isActive: isGameActive && !isPaused && activePlayer == 2,
-                  onTap: _togglePlayer,
+                  onTap: () => _togglePlayer(2),
                   onTimeOut: _handleTimeOut,
                 ),
               ),
@@ -185,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: PlayerTimer(
                 player: player1,
                 isActive: isGameActive && !isPaused && activePlayer == 1,
-                onTap: _togglePlayer,
+                onTap: () => _togglePlayer(1),
                 onTimeOut: _handleTimeOut,
               ),
             ),
